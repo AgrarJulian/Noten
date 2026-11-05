@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotenManager Pro - Mein Schul-Notenrechner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Smooth transition for theme toggling */
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(71, 85, 105, 1);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased text-slate-100 bg-slate-900">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-tr from-sky-500 to-indigo-600 p-2.5 rounded-xl shadow-lg shadow-sky-500/20">
+                        <i class="fa-solid font-bold fa-graduation-cap text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                            NotenManager<span class="text-sky-400">Pro</span>
+                        </h1>
+                        <p class="text-xs text-slate-400 hidden sm:block">Deine Schulnoten perfekt im Blick</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs / Action Buttons -->
+                <div class="flex items-center gap-2">
+                    <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 bg-sky-600 text-white shadow">
+                        <i class="fa-solid fa-chart-pie"></i> <span class="hidden md:inline">Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('target')" id="tab-btn-target" class="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-bullseye"></i> <span class="hidden md:inline">Ziel-Rechner</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-sliders"></i> <span class="hidden md:inline">Gewichtung</span>
+                    </button>
+                    <button onclick="switchTab('backup')" id="tab-btn-backup" class="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-database"></i> <span class="hidden md:inline">Backup</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Global Summary Bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-sm">
+                <div class="text-xs text-slate-400 font-medium">Gesamtdurchschnitt</div>
+                <div id="overall-gpa" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">-.-</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="overall-status">Über alle gewerteten Fächer</div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-sm">
+                <div class="text-xs text-slate-400 font-medium">Beste Note</div>
+                <div id="best-subject" class="text-lg sm:text-xl font-bold text-emerald-400 mt-1 truncate">-</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="best-subject-val">Keine Daten</div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-sm">
+                <div class="text-xs text-slate-400 font-medium">Fächer mit Warnung</div>
+                <div id="warning-count" class="text-2xl sm:text-3xl font-extrabold text-amber-400 mt-1">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">Schnitt ≥ 3.5 (Richtung Note 4)</div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-sm">
+                <div class="text-xs text-slate-400 font-medium">Eingetragene Noten</div>
+                <div id="total-grades-count" class="text-2xl sm:text-3xl font-extrabold text-sky-400 mt-1">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">Insgesamt erfasst</div>
+            </div>
+        </div>
+
+        <!-- Warnbanner wenn Fächer gefährdet sind -->
+        <div id="global-warning-banner" class="hidden mb-6 bg-amber-950/40 border border-amber-500/50 rounded-2xl p-4 text-amber-200 flex items-start gap-3 shadow-md">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-xl mt-0.5"></i>
+            <div>
+                <h3 class="font-bold text-amber-300">Achtung! Handlungsbedarf in folgenden Fächern:</h3>
+                <p id="warning-subjects-list" class="text-sm text-amber-200/90 mt-0.5">Keine</p>
+            </div>
+        </div>
+
+        <!-- TAB 1: DASHBOARD (Fächer-Übersicht & Noteneingabe) -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Filter & Aktionen -->
+            <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="subject-search" oninput="filterSubjects()" placeholder="Fach suchen..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openAddGradeModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-transform active:scale-95">
+                        <i class="fa-solid fa-plus"></i> Neue Note eintragen
+                    </button>
+                    <button onclick="resetAllDataConfirm()" class="px-3 py-2 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/40 rounded-xl text-sm transition" title="Alle Noten zurücksetzen">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Fächer Grid -->
+            <div id="subjects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Cards get rendered dynamically here -->
+            </div>
+        </section>
+
+        <!-- TAB 2: NOTENZIEL-RECHNER -->
+        <section id="tab-target" class="tab-content hidden max-w-3xl mx-auto space-y-6">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-sky-500/10 rounded-xl text-sky-400">
+                        <i class="fa-solid fa-bullseye text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Notenziel-Rechner</h2>
+                        <p class="text-sm text-slate-400">Berechne, welche Note du in der nächsten Leistungsmessung brauchst.</p>
+                    </div>
+                </div>
+
+                <form id="target-calculator-form" onsubmit="calculateTargetGrade(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Fach auswählen</label>
+                        <select id="target-subject-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-sky-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Gewünschte Endnote im Zeugnis</label>
+                            <input type="number" id="target-desired-grade" step="0.1" min="1.0" max="6.0" value="2.0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-sky-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nächste Notenkategorie</label>
+                            <select id="target-category-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-sky-500">
+                                <option value="arbeit">Arbeit / Klassenarbeit</option>
+                                <option value="hue">HÜ (Hausaufgabenüberprüfung)</option>
+                                <option value="epo">Epo (Epochennote)</option>
+                                <option value="muendlich">Mündliche Note</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl transition shadow-lg shadow-sky-600/20 active:scale-[0.99] flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-calculator"></i> Benötigte Note berechnen
+                    </button>
+                </form>
+
+                <!-- Result Display -->
+                <div id="target-result" class="hidden mt-6 p-5 rounded-xl border bg-slate-900/80">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: GEWICHTUNG EINSTELLUNGEN -->
+        <section id="tab-settings" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                            <i class="fa-solid fa-sliders text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Noten-Gewichtung</h2>
+                            <p class="text-sm text-slate-400">Stelle die Standard-Gewichtung für alle oder spezifische Fächer ein.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Weights Form -->
+                <div class="p-4 bg-slate-900/60 border border-slate-700/60 rounded-xl mb-6">
+                    <h3 class="font-bold text-slate-200 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-globe text-sky-400"></i> Globale Standard-Gewichtung (%)
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Arbeiten</label>
+                            <input type="number" id="global-weight-arbeit" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" onchange="updateGlobalWeights()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">HÜs</label>
+                            <input type="number" id="global-weight-hue" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" onchange="updateGlobalWeights()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Epo</label>
+                            <input type="number" id="global-weight-epo" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" onchange="updateGlobalWeights()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Mündlich</label>
+                            <input type="number" id="global-weight-muendlich" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" onchange="updateGlobalWeights()">
+                        </div>
+                    </div>
+                    <div id="global-weight-sum" class="text-xs text-right mt-2 font-medium text-slate-400">Summe: 100%</div>
+                </div>
+
+                <!-- Individual Subject Weight Overrides -->
+                <h3 class="font-bold text-slate-200 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-book text-emerald-400"></i> Individuelle Gewichtung pro Fach
+                </h3>
+                <div id="individual-weights-container" class="space-y-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: BACKUP & DATENSICHERUNG -->
+        <section id="tab-backup" class="tab-content hidden max-w-3xl mx-auto space-y-6">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                        <i class="fa-solid fa-database text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Datensicherung & Transfer</h2>
+                        <p class="text-sm text-slate-400">Exportiere deine Noten als Datei oder importiere sie auf einem anderen Gerät.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Export Card -->
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-xl p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center text-sky-400 mb-3">
+                                <i class="fa-solid fa-file-export text-lg"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-200 text-lg">Noten Exportieren</h3>
+                            <p class="text-xs text-slate-400 mt-1 mb-4">Lade all deine Fächer, Noten und Gewichtungen als sichere `.json` Datei auf dein Tablet/Handy herunter.</p>
+                        </div>
+                        <button onclick="exportDataJSON()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 shadow">
+                            <i class="fa-solid fa-download"></i> Noten herunterladen
+                        </button>
+                    </div>
+
+                    <!-- Import Card -->
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-xl p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 mb-3">
+                                <i class="fa-solid fa-file-import text-lg"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-200 text-lg">Noten Importieren</h3>
+                            <p class="text-xs text-slate-400 mt-1 mb-4">Wähle eine gesicherte Noten-Backup-Datei aus, um deinen Stand wiederherzustellen.</p>
+                        </div>
+                        <div>
+                            <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="importDataJSON(event)">
+                            <button onclick="document.getElementById('import-file-input').click()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 shadow">
+                                <i class="fa-solid fa-upload"></i> Backup-Datei wählen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl text-xs text-amber-300/80 flex items-start gap-2">
+                    <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+                    <span><strong>GitHub Pages Hinweis:</strong> Alle deine Noten werden automatisch lokal im Speicher deines Browsers gespeichert (`localStorage`). Bei der Nutzung dieser Backup-Funktion kannst du deine Noten nahtlos zwischen Handy, Lenovo Tablet und PC übertragen.</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        <p>NotenManager Pro &bull; Bereit für GitHub Pages &bull; Lokal & Sicher</p>
+    </footer>
+
+    <!-- MODAL: NOTE HINZUFÜGEN / BEARBEITEN -->
+    <div id="grade-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button onclick="closeGradeModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white p-1">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <h3 id="modal-title" class="text-lg font-bold text-white mb-4">Neue Note eintragen</h3>
+
+            <form id="grade-form" onsubmit="saveGradeFromModal(event)" class="space-y-4">
+                <input type="hidden" id="modal-grade-id" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Fach</label>
+                    <select id="modal-subject-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Kategorie</label>
+                    <select id="modal-category-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+                        <option value="arbeit">Arbeit / Klassenarbeit</option>
+                        <option value="hue">HÜ (Hausaufgabenüberprüfung)</option>
+                        <option value="epo">Epo (Epochennote)</option>
+                        <option value="muendlich">Mündliche Note</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Note (1.0 bis 6.0 oder Punkte)</label>
+                    <div class="grid grid-cols-6 gap-2 mb-2">
+                        <button type="button" onclick="setQuickGrade(1.0)" class="py-1.5 bg-slate-700 hover:bg-emerald-600 rounded text-xs font-bold">1</button>
+                        <button type="button" onclick="setQuickGrade(2.0)" class="py-1.5 bg-slate-700 hover:bg-lime-600 rounded text-xs font-bold">2</button>
+                        <button type="button" onclick="setQuickGrade(3.0)" class="py-1.5 bg-slate-700 hover:bg-yellow-600 rounded text-xs font-bold">3</button>
+                        <button type="button" onclick="setQuickGrade(4.0)" class="py-1.5 bg-slate-700 hover:bg-amber-600 rounded text-xs font-bold">4</button>
+                        <button type="button" onclick="setQuickGrade(5.0)" class="py-1.5 bg-slate-700 hover:bg-orange-600 rounded text-xs font-bold">5</button>
+                        <button type="button" onclick="setQuickGrade(6.0)" class="py-1.5 bg-slate-700 hover:bg-red-600 rounded text-xs font-bold">6</button>
+                    </div>
+                    <input type="number" id="modal-grade-value" step="0.1" min="1.0" max="6.0" required placeholder="Z. B. 2.3 oder 1.7" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Bezeichnung (optional)</label>
+                    <input type="text" id="modal-grade-label" placeholder="Z. B. 1. Arbeit, Grammatik-HÜ" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeGradeModal()" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-medium text-sm">Abbrechen</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-medium text-sm shadow">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRM DIALOG MODAL -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center">
+            <div class="w-12 h-12 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <h3 id="confirm-modal-title" class="text-lg font-bold text-white mb-2">Bist du sicher?</h3>
+            <p id="confirm-modal-message" class="text-sm text-slate-300 mb-6">Möchtest du diese Aktion wirklich ausführen?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal(false)" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-medium text-sm">Abbrechen</button>
+                <button id="confirm-modal-btn" onclick="closeConfirmModal(true)" class="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium text-sm shadow">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA STRUCTURE & INITIAL STATE ---
+        const DEFAULT_SUBJECTS = [
+            { id: 'mathe', name: 'Mathe', icon: 'fa-calculator', color: 'from-blue-500 to-indigo-600' },
+            { id: 'deutsch', name: 'Deutsch', icon: 'fa-book-open', color: 'from-red-500 to-rose-600' },
+            { id: 'englisch', name: 'Englisch', icon: 'fa-language', color: 'from-purple-500 to-pink-600' },
+            { id: 'tun', name: 'TuN', icon: 'fa-microchip', color: 'from-teal-500 to-emerald-600' },
+            { id: 'bueko', name: 'BüKo', icon: 'fa-laptop-code', color: 'from-cyan-500 to-blue-600' },
+            { id: 'erdkunde', name: 'Erdkunde', icon: 'fa-earth-americas', color: 'from-emerald-500 to-teal-700' },
+            { id: 'sport', name: 'Sport', icon: 'fa-volleyball', color: 'from-amber-500 to-orange-600' },
+            { id: 'kunst', name: 'Kunst', icon: 'fa-palette', color: 'from-fuchsia-500 to-purple-600' },
+            { id: 'religion', name: 'Religion', icon: 'fa-hands-praying', color: 'from-sky-400 to-blue-600' },
+            { id: 'geschichte', name: 'Geschichte', icon: 'fa-landmark', color: 'from-yellow-600 to-amber-700' },
+            { id: 'musik', name: 'Musik', icon: 'fa-music', color: 'from-pink-500 to-rose-600' },
+            { id: 'chemie', name: 'Chemie', icon: 'fa-flask', color: 'from-violet-500 to-purple-700' }
+        ];
+
+        const CATEGORY_NAMES = {
+            arbeit: 'Arbeit',
+            hue: 'HÜ',
+            epo: 'Epo',
+            muendlich: 'Mündlich'
+        };
+
+        const DEFAULT_WEIGHTS = {
+            arbeit: 50,
+            hue: 15,
+            epo: 15,
+            muendlich: 20
+        };
+
+        // State object loaded from LocalStorage or Defaults
+        let state = {
+            subjects: DEFAULT_SUBJECTS,
+            globalWeights: { ...DEFAULT_WEIGHTS },
+            subjectWeights: {}, // e.g. { mathe: { arbeit: 60, ... } }
+            grades: [] // Array of { id, subjectId, category, value, label, date }
+        };
+
+        let confirmCallback = null;
+
+        // --- INIT & LOCAL STORAGE ---
+        window.onload = function() {
+            loadState();
+            renderDashboard();
+            renderWeightsTab();
+            populateSubjectSelects();
+        };
+
+        function saveState() {
+            try {
+                localStorage.setItem('notenmanager_data', JSON.stringify(state));
+            } catch (e) {
+                console.error("Local storage error:", e);
+            }
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('notenmanager_data');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.grades = parsed.grades || [];
+                    state.globalWeights = parsed.globalWeights || { ...DEFAULT_WEIGHTS };
+                    state.subjectWeights = parsed.subjectWeights || {};
+                } catch (e) {
+                    console.error("Failed to parse saved data", e);
+                }
+            }
+        }
+
+        // --- NAVIGATION & TABS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-btn-"]').forEach(btn => {
+                btn.classList.remove('bg-sky-600', 'text-white', 'shadow');
+                btn.classList.add('text-slate-300');
+            });
+
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+
+            if (targetTab && targetBtn) {
+                targetTab.classList.remove('hidden');
+                targetBtn.classList.add('bg-sky-600', 'text-white', 'shadow');
+                targetBtn.classList.remove('text-slate-300');
+            }
+
+            if (tabId === 'target') {
+                calculateTargetGrade();
+            } else if (tabId === 'settings') {
+                renderWeightsTab();
+            }
+        }
+
+        // --- CALCULATIONS ---
+
+        // Get effective weights for a given subject ID
+        function getWeightsForSubject(subjectId) {
+            if (state.subjectWeights[subjectId]) {
+                return state.subjectWeights[subjectId];
+            }
+            return state.globalWeights;
+        }
+
+        // Calculate Average for a specific subject
+        function calculateSubjectAverage(subjectId) {
+            const subjectGrades = state.grades.filter(g => g.subjectId === subjectId);
+            if (subjectGrades.length === 0) return null;
+
+            const weights = getWeightsForSubject(subjectId);
+            
+            // Group grades by category
+            let categorySums = { arbeit: 0, hue: 0, epo: 0, muendlich: 0 };
+            let categoryCounts = { arbeit: 0, hue: 0, epo: 0, muendlich: 0 };
+
+            subjectGrades.forEach(g => {
+                if (categorySums.hasOwnProperty(g.category)) {
+                    categorySums[g.category] += parseFloat(g.value);
+                    categoryCounts[g.category] += 1;
+                }
+            });
+
+            // Calculate weighted average
+            let totalWeightedSum = 0;
+            let totalWeightUsed = 0;
+
+            for (const cat in weights) {
+                if (categoryCounts[cat] > 0) {
+                    const catAvg = categorySums[cat] / categoryCounts[cat];
+                    const catWeight = parseFloat(weights[cat]);
+                    totalWeightedSum += catAvg * catWeight;
+                    totalWeightUsed += catWeight;
+                }
+            }
+
+            if (totalWeightUsed === 0) return null;
+
+            const exactAverage = totalWeightedSum / totalWeightUsed;
+            return Math.round(exactAverage * 100) / 100; // Round to 2 decimal places
+        }
+
+        // --- UI RENDERING (DASHBOARD) ---
+        function renderDashboard() {
+            const grid = document.getElementById('subjects-grid');
+            grid.innerHTML = '';
+
+            let warningSubjects = [];
+            let totalGPAWeightedSum = 0;
+            let totalGPACount = 0;
+            let bestGradeVal = 99;
+            let bestGradeSubject = '-';
+
+            state.subjects.forEach(subject => {
+                const avg = calculateSubjectAverage(subject.id);
+                const gradesCount = state.grades.filter(g => g.subjectId === subject.id).length;
+
+                // Color calculation based on grade
+                let gradeBadgeBg = 'bg-slate-700 text-slate-300';
+                let isWarning = false;
+
+                if (avg !== null) {
+                    totalGPAWeightedSum += avg;
+                    totalGPACount++;
+
+                    if (avg < bestGradeVal) {
+                        bestGradeVal = avg;
+                        bestGradeSubject = subject.name;
+                    }
+
+                    if (avg <= 2.4) {
+                        gradeBadgeBg = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                    } else if (avg <= 3.4) {
+                        gradeBadgeBg = 'bg-lime-500/20 text-lime-300 border border-lime-500/40';
+                    } else if (avg <= 4.4) {
+                        gradeBadgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                        isWarning = true;
+                    } else {
+                        gradeBadgeBg = 'bg-red-500/20 text-red-300 border border-red-500/40';
+                        isWarning = true;
+                    }
+
+                    if (isWarning) {
+                        warningSubjects.push({ name: subject.name, avg: avg });
+                    }
+                }
+
+                // Render Subject Card
+                const card = document.createElement('div');
+                card.className = `subject-card bg-slate-800 border ${isWarning ? 'border-amber-500/60 shadow-lg shadow-amber-500/5' : 'border-slate-700/80'} rounded-2xl p-5 flex flex-col justify-between transition hover:border-slate-600`;
+                card.dataset.name = subject.name.toLowerCase();
+
+                const roundedAvgDisplay = avg !== null ? avg.toFixed(1) : '-.-';
+                const tendenzDisplay = avg !== null ? Math.round(avg) : '-';
+
+                // Categorized list of grades inside the card
+                const subjectGradesList = state.grades.filter(g => g.subjectId === subject.id);
+                let gradesPillsHTML = '';
+
+                if (subjectGradesList.length > 0) {
+                    gradesPillsHTML = subjectGradesList.map(g => `
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/90 border border-slate-700 rounded-lg text-xs font-medium group">
+                            <span class="text-slate-400 text-[10px] uppercase tracking-wider">${CATEGORY_NAMES[g.category]}</span>
+                            <span class="font-bold text-white">${parseFloat(g.value).toFixed(1)}</span>
+                            <button onclick="deleteGrade('${g.id}')" class="text-slate-500 hover:text-red-400 ml-1 transition" title="Löschen">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                } else {
+                    gradesPillsHTML = `<span class="text-xs text-slate-500 italic">Noch keine Noten eingetragen</span>`;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr ${subject.color} flex items-center justify-center text-white shadow-md">
+                                    <i class="fa-solid ${subject.icon}"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-white">${subject.name}</h3>
+                                    <p class="text-xs text-slate-400">${gradesCount} ${gradesCount === 1 ? 'Note' : 'Noten'}</p>
+                                </div>
+                            </div>
+                            <!-- Grade Average Badge -->
+                            <div class="text-right">
+                                <div class="px-3 py-1 rounded-xl text-lg font-extrabold ${gradeBadgeBg}">
+                                    ${roundedAvgDisplay}
+                                </div>
+                                ${avg !== null ? `<div class="text-[10px] text-slate-400 mt-0.5">Tendenz: <strong class="text-slate-200">Note ${tendenzDisplay}</strong></div>` : ''}
+                            </div>
+                        </div>
+
+                        ${isWarning ? `
+                            <div class="mb-3 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-xs flex items-center gap-2">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Achtung: Tendenz Richtung Note ${tendenzDisplay}!</span>
+                            </div>
+                        ` : ''}
+
+                        <!-- Noten Chips -->
+                        <div class="mt-3 flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                            ${gradesPillsHTML}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400">
+                            Gewichtung: ${getWeightsSummaryString(subject.id)}
+                        </span>
+                        <button onclick="openAddGradeModal('${subject.id}')" class="px-3 py-1.5 bg-slate-700 hover:bg-sky-600 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Note
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Update Header Stats
+            const overallGPA = totalGPACount > 0 ? (totalGPAWeightedSum / totalGPACount).toFixed(2) : '-.-';
+            document.getElementById('overall-gpa').innerText = overallGPA;
+            document.getElementById('total-grades-count').innerText = state.grades.length;
+            document.getElementById('warning-count').innerText = warningSubjects.length;
+
+            if (bestGradeSubject !== '-') {
+                document.getElementById('best-subject').innerText = bestGradeSubject;
+                document.getElementById('best-subject-val').innerText = `Durchschnitt: ${bestGradeVal.toFixed(1)}`;
+            } else {
+                document.getElementById('best-subject').innerText = '-';
+                document.getElementById('best-subject-val').innerText = 'Keine Daten';
+            }
+
+            // Global Warning Banner
+            const warningBanner = document.getElementById('global-warning-banner');
+            if (warningSubjects.length > 0) {
+                warningBanner.classList.remove('hidden');
+                document.getElementById('warning-subjects-list').innerText = warningSubjects.map(s => `${s.name} (${s.avg.toFixed(1)})`).join(', ');
+            } else {
+                warningBanner.classList.add('hidden');
+            }
+        }
+
+        function getWeightsSummaryString(subjectId) {
+            const w = getWeightsForSubject(subjectId);
+            return `A:${w.arbeit}% / H:${w.hue}% / E:${w.epo}% / M:${w.muendlich}%`;
+        }
+
+        // Filter subjects search
+        function filterSubjects() {
+            const query = document.getElementById('subject-search').value.toLowerCase();
+            document.querySelectorAll('.subject-card').forEach(card => {
+                const name = card.dataset.name;
+                if (name.includes(query)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- NOTEN MODAL & HANDLING ---
+        function populateSubjectSelects() {
+            const modalSelect = document.getElementById('modal-subject-select');
+            const targetSelect = document.getElementById('target-subject-select');
+
+            modalSelect.innerHTML = '';
+            targetSelect.innerHTML = '';
+
+            state.subjects.forEach(sub => {
+                const opt1 = new Option(sub.name, sub.id);
+                const opt2 = new Option(sub.name, sub.id);
+                modalSelect.add(opt1);
+                targetSelect.add(opt2);
+            });
+        }
+
+        function openAddGradeModal(defaultSubjectId = null) {
+            document.getElementById('modal-title').innerText = 'Neue Note eintragen';
+            document.getElementById('modal-grade-id').value = '';
+            document.getElementById('modal-grade-value').value = '';
+            document.getElementById('modal-grade-label').value = '';
+
+            if (defaultSubjectId) {
+                document.getElementById('modal-subject-select').value = defaultSubjectId;
+            }
+
+            document.getElementById('grade-modal').classList.remove('hidden');
+        }
+
+        function closeGradeModal() {
+            document.getElementById('grade-modal').classList.add('hidden');
+        }
+
+        function setQuickGrade(val) {
+            document.getElementById('modal-grade-value').value = val.toFixed(1);
+        }
+
+        function saveGradeFromModal(e) {
+            e.preventDefault();
+
+            const subjectId = document.getElementById('modal-subject-select').value;
+            const category = document.getElementById('modal-category-select').value;
+            const value = parseFloat(document.getElementById('modal-grade-value').value);
+            const label = document.getElementById('modal-grade-label').value.trim();
+
+            if (isNaN(value) || value < 1.0 || value > 6.0) {
+                alert("Bitte gib eine gültige Note zwischen 1.0 und 6.0 ein.");
+                return;
+            }
+
+            const newGrade = {
+                id: 'g_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                subjectId,
+                category,
+                value,
+                label,
+                date: new Date().toISOString()
+            };
+
+            state.grades.push(newGrade);
+            saveState();
+            renderDashboard();
+            closeGradeModal();
+        }
+
+        function deleteGrade(gradeId) {
+            openConfirmModal("Note löschen?", "Möchtest du diese Note wirklich entfernen?", function() {
+                state.grades = state.grades.filter(g => g.id !== gradeId);
+                saveState();
+                renderDashboard();
+            });
+        }
+
+        // --- NOTENZIEL-RECHNER ---
+        function calculateTargetGrade(e) {
+            if (e) e.preventDefault();
+
+            const subjectId = document.getElementById('target-subject-select').value;
+            const desiredTarget = parseFloat(document.getElementById('target-desired-grade').value);
+            const targetCategory = document.getElementById('target-category-select').value;
+
+            const resultContainer = document.getElementById('target-result');
+            resultContainer.classList.remove('hidden');
+
+            const currentAvg = calculateSubjectAverage(subjectId);
+            const weights = getWeightsForSubject(subjectId);
+            const catWeight = parseFloat(weights[targetCategory]);
+
+            const subjectGrades = state.grades.filter(g => g.subjectId === subjectId);
+
+            // Calculate current weighted sums per category
+            let catSums = { arbeit: 0, hue: 0, epo: 0, muendlich: 0 };
+            let catCounts = { arbeit: 0, hue: 0, epo: 0, muendlich: 0 };
+
+            subjectGrades.forEach(g => {
+                catSums[g.category] += parseFloat(g.value);
+                catCounts[g.category] += 1;
+            });
+
+            // Calculate target note required:
+            // Formula: Desired = (Sum of existing weighted averages + ( (CurrentCatSum + X) / (CurrentCatCount + 1) * TargetCatWeight )) / TotalWeight
+            
+            // Let's simplify equation:
+            // TargetAverage = (Sum_other_cats + NewCatAvg * CatWeight) / TotalWeight
+            
+            let otherWeightedSum = 0;
+            let totalWeightUsedWithNew = catWeight; // at least target cat will have weight
+
+            for (const cat in weights) {
+                if (cat !== targetCategory && catCounts[cat] > 0) {
+                    const avg = catSums[cat] / catCounts[cat];
+                    const w = parseFloat(weights[cat]);
+                    otherWeightedSum += avg * w;
+                    totalWeightUsedWithNew += w;
+                }
+            }
+
+            // Target equation:
+            // desiredTarget = (otherWeightedSum + NewCatAvg * catWeight) / totalWeightUsedWithNew
+            // => desiredTarget * totalWeightUsedWithNew - otherWeightedSum = NewCatAvg * catWeight
+            // => NewCatAvg = (desiredTarget * totalWeightUsedWithNew - otherWeightedSum) / catWeight
+
+            const requiredCatAvg = (desiredTarget * totalWeightUsedWithNew - otherWeightedSum) / catWeight;
+
+            // NewCatAvg = (CurrentCatSum + RequiredGrade) / (CurrentCatCount + 1)
+            // => RequiredGrade = RequiredCatAvg * (CurrentCatCount + 1) - CurrentCatSum
+
+            const currentCatCount = catCounts[targetCategory];
+            const currentCatSum = catSums[targetCategory];
+
+            const requiredGrade = requiredCatAvg * (currentCatCount + 1) - currentCatSum;
+            const roundedRequired = Math.round(requiredGrade * 10) / 10;
+
+            const subjectObj = state.subjects.find(s => s.id === subjectId);
+
+            let statusHTML = '';
+
+            if (roundedRequired < 1.0) {
+                statusHTML = `
+                    <div class="text-emerald-400 font-bold text-lg mb-1"><i class="fa-solid fa-circle-check"></i> Sehr leicht machbar!</div>
+                    <p class="text-sm text-slate-300">Du kannst selbst mit einer Note <strong>1.0 oder schlechter</strong> dein Notenziel von <strong>${desiredTarget.toFixed(1)}</strong> problemlos erreichen.</p>
+                `;
+            } else if (roundedRequired > 6.0) {
+                statusHTML = `
+                    <div class="text-red-400 font-bold text-lg mb-1"><i class="fa-solid fa-circle-xmark"></i> Leider rechnerisch unmöglich</div>
+                    <p class="text-sm text-slate-300">Selbst mit einer <strong>1.0</strong> in der nächsten ${CATEGORY_NAMES[targetCategory]} kannst du die Zielnote <strong>${desiredTarget.toFixed(1)}</strong> nicht mehr erreichen. Versuche dein Ziel leicht anzupassen.</p>
+                `;
+            } else {
+                let badgeColor = roundedRequired <= 2.5 ? 'text-emerald-400' : (roundedRequired <= 4.0 ? 'text-amber-400' : 'text-orange-400');
+                statusHTML = `
+                    <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Benötigte Note in der nächsten ${CATEGORY_NAMES[targetCategory]}</div>
+                    <div class="text-4xl font-extrabold ${badgeColor} my-2">${roundedRequired.toFixed(1)}</div>
+                    <p class="text-sm text-slate-300">Wenn du eine <strong>${roundedRequired.toFixed(1)}</strong> schreibst/bekommst, liegt deine Gesamtnote in <strong>${subjectObj.name}</strong> exakt bei deinem Ziel von <strong>${desiredTarget.toFixed(1)}</strong>.</p>
+                `;
+            }
+
+            resultContainer.innerHTML = statusHTML;
+        }
+
+        // --- GEWICHTUNG SEKTION ---
+        function renderWeightsTab() {
+            // Populate global inputs
+            document.getElementById('global-weight-arbeit').value = state.globalWeights.arbeit;
+            document.getElementById('global-weight-hue').value = state.globalWeights.hue;
+            document.getElementById('global-weight-epo').value = state.globalWeights.epo;
+            document.getElementById('global-weight-muendlich').value = state.globalWeights.muendlich;
+
+            updateGlobalSumDisplay();
+
+            // Populate individual subject inputs
+            const container = document.getElementById('individual-weights-container');
+            container.innerHTML = '';
+
+            state.subjects.forEach(subject => {
+                const hasCustom = !!state.subjectWeights[subject.id];
+                const weights = getWeightsForSubject(subject.id);
+
+                const item = document.createElement('div');
+                item.className = "p-4 bg-slate-900/60 border border-slate-700/60 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4";
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr ${subject.color} flex items-center justify-center text-white text-xs">
+                            <i class="fa-solid ${subject.icon}"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-200">${subject.name}</span>
+                            <span class="text-xs text-slate-400 block">${hasCustom ? 'Eigene Gewichtung' : 'Verwendet Standard'}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2 text-xs max-w-md w-full">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">Arbeit %</span>
+                            <input type="number" value="${weights.arbeit}" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-center" onchange="updateSubjectWeight('${subject.id}', 'arbeit', this.value)">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">HÜ %</span>
+                            <input type="number" value="${weights.hue}" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-center" onchange="updateSubjectWeight('${subject.id}', 'hue', this.value)">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">Epo %</span>
+                            <input type="number" value="${weights.epo}" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-center" onchange="updateSubjectWeight('${subject.id}', 'epo', this.value)">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">Mündl. %</span>
+                            <input type="number" value="${weights.muendlich}" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-center" onchange="updateSubjectWeight('${subject.id}', 'muendlich', this.value)">
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(item);
+            });
+        }
+
+        function updateGlobalWeights() {
+            const arbeit = parseFloat(document.getElementById('global-weight-arbeit').value) || 0;
+            const hue = parseFloat(document.getElementById('global-weight-hue').value) || 0;
+            const epo = parseFloat(document.getElementById('global-weight-epo').value) || 0;
+            const muendlich = parseFloat(document.getElementById('global-weight-muendlich').value) || 0;
+
+            state.globalWeights = { arbeit, hue, epo, muendlich };
+            updateGlobalSumDisplay();
+            saveState();
+            renderDashboard();
+        }
+
+        function updateGlobalSumDisplay() {
+            const sum = state.globalWeights.arbeit + state.globalWeights.hue + state.globalWeights.epo + state.globalWeights.muendlich;
+            const sumEl = document.getElementById('global-weight-sum');
+            sumEl.innerText = `Summe: ${sum}%`;
+            sumEl.className = `text-xs text-right mt-2 font-medium ${sum === 100 ? 'text-emerald-400' : 'text-amber-400'}`;
+        }
+
+        function updateSubjectWeight(subjectId, cat, val) {
+            if (!state.subjectWeights[subjectId]) {
+                state.subjectWeights[subjectId] = { ...getWeightsForSubject(subjectId) };
+            }
+
+            state.subjectWeights[subjectId][cat] = parseFloat(val) || 0;
+            saveState();
+            renderDashboard();
+        }
+
+        // --- BACKUP & EXPORT/IMPORT ---
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `NotenManager_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDataJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && (importedState.grades || importedState.globalWeights)) {
+                        state = importedState;
+                        saveState();
+                        renderDashboard();
+                        renderWeightsTab();
+                        populateSubjectSelects();
+                        alert("Noten & Einstellungen erfolgreich importiert!");
+                    } else {
+                        alert("Ungültiges Backup-Dateiformat.");
+                    }
+                } catch (err) {
+                    alert("Fehler beim Lesen der Datei: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetAllDataConfirm() {
+            openConfirmModal("Alle Noten löschen?", "Möchtest du wirklich alle eingetragenen Noten unwiderruflich löschen?", function() {
+                state.grades = [];
+                saveState();
+                renderDashboard();
+            });
+        }
+
+        // --- CONFIRM MODAL HELPER ---
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-modal-title').innerText = title;
+            document.getElementById('confirm-modal-message').innerText = message;
+            confirmCallback = onConfirm;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal(accepted) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (accepted && confirmCallback) {
+                confirmCallback();
+            }
+            confirmCallback = null;
+        }
+    </script>
+</body>
+</html>
